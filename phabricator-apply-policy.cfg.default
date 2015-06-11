@@ -1,0 +1,14 @@
+<?php
+
+// Enable (debug) output
+define("DEBUG", true);
+
+// Send an email with all debug output to this address (specify the empty string to disable)
+define("DEBUG_EMAIL", "mail@example.com");
+
+// Instructions what to do:
+define("DRY_RUN", true);
+
+// Adapt this according to your Phabricator setup:
+define("PHAB_ADMIN_USERNAME", "AdministratorUsername");
+define("PHAB_USER_POLICY_APPLIED_FIELD", "std:user:mycustomfield:policy:applied");

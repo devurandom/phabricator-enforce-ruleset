@@ -25,7 +25,8 @@ register_shutdown_function("send_report");
 // PHABRICATOR
 
 function getField($object, $field_key, $viewer) {
-	$fields = PhabricatorCustomField::getObjectFields($object, PhabricatorCustomField::ROLE_DEFAULT)
+	$role = PhabricatorCustomField::ROLE_APPLICATIONTRANSACTIONS;
+	$fields = PhabricatorCustomField::getObjectFields($object, $role)
 		->setViewer($viewer)
 		->readFieldsFromStorage($object)
 		->getFields();
@@ -36,7 +37,8 @@ function getField($object, $field_key, $viewer) {
 }
 
 function setField($object, $field_key, $field_value, $viewer) {
-	$fields = PhabricatorCustomField::getObjectFields($object, PhabricatorCustomField::ROLE_DEFAULT)
+	$role = PhabricatorCustomField::ROLE_APPLICATIONTRANSACTIONS;
+	$fields = PhabricatorCustomField::getObjectFields($object, $role)
 		->setViewer($viewer)
 		->readFieldsFromStorage($object)
 		->getFields();
@@ -82,7 +84,7 @@ function modifyProjectMembers($project, $members_diff, $viewer) {
 			->setMetadataValue('edge:type', $type_member)
 			->setNewValue($members_diff);
 
-		$editor = id(new PhabricatorProjectTransactionEditor($project))
+		$editor = id(new PhabricatorProjectTransactionEditor())
 			->setActor($viewer)
 			->setContentSource(PhabricatorContentSource::newConsoleSource())
 			->setContinueOnNoEffect(true)
@@ -91,7 +93,8 @@ function modifyProjectMembers($project, $members_diff, $viewer) {
 	}
 }
 
-// UPDATE
+
+// APPLY POLICIES
 
 function apply_policies_to_users($phab_users, $phab) {
 	$phab_admin = $phab["admin"];
@@ -101,6 +104,8 @@ function apply_policies_to_users($phab_users, $phab) {
 	$projectphid_groupdn_map = array();
 
 	foreach ($phab_users as $user) {
+		debug("Updating user: " . $user->getUsername() . "\n");
+
 		$policy_applied = getField($user, $phab_user_policy_applied_field, $phab_admin);
 		switch ($policy_applied) {
 			default:
@@ -116,6 +121,9 @@ function apply_policies_to_users($phab_users, $phab) {
 
 	apply_policy_v1($phab);
 }
+
+
+// POLICY V1
 
 $spielwiese_members_diff = array('+' => array(), '-' => array());
 

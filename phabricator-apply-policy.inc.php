@@ -16,8 +16,8 @@ function debug($str) {
 function send_report() {
 	global $mail_str;
 
-	if (!empty($mail_str) && !empty(DEBUG_EMAIL)) {
-		mail(DEBUG_EMAIL, "Phabricator policy enforcer report", $mail_str);
+	if (!empty($mail_str) && !empty(DEBUG_MAILTO)) {
+		mail(DEBUG_MAILTO, "Phabricator policy enforcer report", $mail_str, "From: " . DEBUG_MAILFROM . "\r\n");
 	}
 }
 register_shutdown_function("send_report");

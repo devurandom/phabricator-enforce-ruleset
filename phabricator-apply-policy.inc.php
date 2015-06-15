@@ -109,7 +109,9 @@ function apply_policies_to_users($phab_users, $phab) {
 			case POLICY_VERSION_MAX: // already up to date
 		}
 
-		setField($user, $phab_user_policy_applied_field, POLICY_VERSION_MAX, $phab_admin);
+		if (!DRY_RUN) {
+			setField($user, $phab_user_policy_applied_field, POLICY_VERSION_MAX, $phab_admin);
+		}
 	}
 
 	apply_policy_v1($phab);

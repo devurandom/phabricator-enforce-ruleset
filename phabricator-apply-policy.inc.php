@@ -25,23 +25,24 @@ register_shutdown_function("send_report");
 // PHABRICATOR
 
 function initUserProfile($user, $viewer) {
-	debug("Initialising user: " . $user->getUsername() . "\n");
-
 	$profile = $user->loadUserProfile();
+	$changed = false;
 
-	debug("  Title: " . $profile->getTitle() . "\n");
 	if ($profile->getTitle() === null) {
 		$profile->setTitle("");
-		debug("  New title: " . $profile->getTitle() . "\n");
+		debug("  Initialised title: " . $profile->getTitle() . " for user: " . $user->getUsername() . "\n");
+		$changed = true;
 	}
 
-	debug("  Blurb: " . $profile->getBlurb() . "\n");
 	if ($profile->getBlurb() === null) {
 		$profile->setBlurb("");
-		debug("  New blurb: " . $profile->getBlurb() . "\n");
+		debug("  Initialised blurb: " . $profile->getBlurb() . " for user: " . $user->getUsername() . "\n");
+		$changed = true;
 	}
 
-	$profile->save();
+	if ($changed) {
+		$profile->save();
+	}
 }
 
 function getField($object, $field_key, $viewer) {
@@ -168,8 +169,6 @@ function apply_policies_to_users($phab_users, $phab) {
 	$projectphid_groupdn_map = array();
 
 	foreach ($phab_users as $user) {
-		debug("Updating user: " . $user->getUsername() . "\n");
-
 		$policy_applied = getField($user, $phab_user_policy_applied_field, $phab_admin);
 		switch ($policy_applied) {
 			default:
@@ -193,18 +192,25 @@ $spielwiese_members_diff = array('+' => array(), '-' => array());
 
 function apply_policy_v1_to_user($user) {
 	global $spielwiese_members_diff;
+
+	debug("Applying policy v1 to user: " . $user->getUsername() . "\n");
+
 	$spielwiese_members_diff['+'][$user->getPHID()] = $user->getPHID();
 }
 
 function apply_policy_v1($phab) {
 	global $spielwiese_members_diff;
 
-	$phab_admin = $phab["admin"];
-	$projectname = "Spielwiese";
-	$project = id(new PhabricatorProjectQuery())
-		->setViewer($phab_admin)
-		->withNames(array($projectname))
-		->executeOne();
+	if (!empty($spielwiese_members_diff['+'])) {
+		debug("Finalising policy v1\n");
 
-	modifyProjectMembers($project, $spielwiese_members_diff, $phab_admin);
+		$phab_admin = $phab["admin"];
+		$projectname = "Spielwiese";
+		$project = id(new PhabricatorProjectQuery())
+			->setViewer($phab_admin)
+			->withNames(array($projectname))
+			->executeOne();
+
+		modifyProjectMembers($project, $spielwiese_members_diff, $phab_admin);
+	}
 }

@@ -25,20 +25,20 @@ register_shutdown_function("send_report");
 // PHABRICATOR
 
 function initUserProfile($user, $viewer) {
-	print("Initialising user: " . $user->getUsername() . "\n");
+	debug("Initialising user: " . $user->getUsername() . "\n");
 
 	$profile = $user->loadUserProfile();
 
-	print("  Title: " . $profile->getTitle() . "\n");
+	debug("  Title: " . $profile->getTitle() . "\n");
 	if ($profile->getTitle() === null) {
 		$profile->setTitle("");
-		print("  New title: " . $profile->getTitle() . "\n");
+		debug("  New title: " . $profile->getTitle() . "\n");
 	}
 
-	print("  Blurb: " . $profile->getBlurb() . "\n");
+	debug("  Blurb: " . $profile->getBlurb() . "\n");
 	if ($profile->getBlurb() === null) {
 		$profile->setBlurb("");
-		print("  New blurb: " . $profile->getBlurb() . "\n");
+		debug("  New blurb: " . $profile->getBlurb() . "\n");
 	}
 
 	$profile->save();

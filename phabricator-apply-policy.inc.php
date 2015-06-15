@@ -24,6 +24,26 @@ register_shutdown_function("send_report");
 
 // PHABRICATOR
 
+function initUserProfile($user, $viewer) {
+	print("Initialising user: " . $user->getUsername() . "\n");
+
+	$profile = $user->loadUserProfile();
+
+	print("  Title: " . $profile->getTitle() . "\n");
+	if ($profile->getTitle() === null) {
+		$profile->setTitle("");
+		print("  New title: " . $profile->getTitle() . "\n");
+	}
+
+	print("  Blurb: " . $profile->getBlurb() . "\n");
+	if ($profile->getBlurb() === null) {
+		$profile->setBlurb("");
+		print("  New blurb: " . $profile->getBlurb() . "\n");
+	}
+
+	$profile->save();
+}
+
 function getField($object, $field_key, $viewer) {
 	$role = PhabricatorCustomField::ROLE_APPLICATIONTRANSACTIONS;
 	$fields = PhabricatorCustomField::getObjectFields($object, $role)
@@ -36,16 +56,60 @@ function getField($object, $field_key, $viewer) {
 		->getFieldValue();
 }
 
-function setField($object, $field_key, $field_value, $viewer) {
+
+function buildSetFieldTransaction($object, $field_key, $field_value, $template, $viewer) {
 	$role = PhabricatorCustomField::ROLE_APPLICATIONTRANSACTIONS;
 	$fields = PhabricatorCustomField::getObjectFields($object, $role)
 		->setViewer($viewer)
 		->readFieldsFromStorage($object)
 		->getFields();
 
-	return idx($fields, $field_key)
-		->getProxy()
-		->setFieldValue($field_value);
+	$field = idx($fields, $field_key);
+
+	$transaction_type = $field->getApplicationTransactionType();
+	$xaction = id(clone $template)
+		->setTransactionType($transaction_type);
+
+	if ($transaction_type == PhabricatorTransactions::TYPE_CUSTOMFIELD) {
+		// For TYPE_CUSTOMFIELD transactions only, we provide the old value
+		// as an input.
+		$old_value = $field->getOldValueForApplicationTransactions();
+		$xaction->setOldValue($old_value);
+	}
+
+	$field->getProxy()->setFieldValue($field_value);
+
+	$new_value = $field->getNewValueForApplicationTransactions();
+	$xaction->setNewValue($new_value);
+
+	if ($transaction_type == PhabricatorTransactions::TYPE_CUSTOMFIELD) {
+		// For TYPE_CUSTOMFIELD transactions, add the field key in metadata.
+		$xaction->setMetadataValue('customfield:key', $field->getFieldKey());
+	}
+
+	$metadata = $field->getApplicationTransactionMetadata();
+	foreach ($metadata as $key => $value) {
+		$xaction->setMetadataValue($key, $value);
+	}
+
+	return $xaction;
+}
+
+
+function setUserField($user, $field_key, $field_value, $viewer) {
+	initUserProfile($user, $viewer);
+
+	$xactions = array();
+	$transaction_template = new PhabricatorUserTransaction();
+
+	$xactions[] = buildSetFieldTransaction($user, $field_key, $field_value, $transaction_template, $viewer);
+
+	$editor = id(new PhabricatorUserProfileEditor())
+		->setActor($viewer)
+		->setContentSource(PhabricatorContentSource::newConsoleSource())
+		->setContinueOnNoEffect(true)
+		->setContinueOnMissingFields(true)
+		->applyTransactions($user, $xactions);
 }
 
 function modifyProjectMembers($project, $members_diff, $viewer) {
@@ -115,7 +179,7 @@ function apply_policies_to_users($phab_users, $phab) {
 		}
 
 		if (!DRY_RUN) {
-			setField($user, $phab_user_policy_applied_field, POLICY_VERSION_MAX, $phab_admin);
+			setUserField($user, $phab_user_policy_applied_field, POLICY_VERSION_MAX, $phab_admin);
 		}
 	}
 

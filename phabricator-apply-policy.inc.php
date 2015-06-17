@@ -22,6 +22,7 @@ function send_report() {
 }
 register_shutdown_function("send_report");
 
+
 // PHABRICATOR
 
 function initUserProfile($user, $viewer) {
@@ -30,13 +31,13 @@ function initUserProfile($user, $viewer) {
 
 	if ($profile->getTitle() === null) {
 		$profile->setTitle("");
-		debug("  Initialised title: " . $profile->getTitle() . " for user: " . $user->getUsername() . "\n");
+		debug($user->getUsername() . "> Initialised title: '" . $profile->getTitle() . "'\n");
 		$changed = true;
 	}
 
 	if ($profile->getBlurb() === null) {
 		$profile->setBlurb("");
-		debug("  Initialised blurb: " . $profile->getBlurb() . " for user: " . $user->getUsername() . "\n");
+		debug($user->getUsername() . "> Initialised blurb: '" . $profile->getBlurb() . "'\n");
 		$changed = true;
 	}
 
@@ -44,6 +45,7 @@ function initUserProfile($user, $viewer) {
 		$profile->save();
 	}
 }
+
 
 function getField($object, $field_key, $viewer) {
 	$role = PhabricatorCustomField::ROLE_APPLICATIONTRANSACTIONS;
@@ -112,6 +114,7 @@ function setUserField($user, $field_key, $field_value, $viewer) {
 		->setContinueOnMissingFields(true)
 		->applyTransactions($user, $xactions);
 }
+
 
 function modifyProjectMembers($project, $members_diff, $viewer) {
 	$projectname = $project->getName();
@@ -193,15 +196,17 @@ $spielwiese_members_diff = array('+' => array(), '-' => array());
 function apply_policy_v1_to_user($user) {
 	global $spielwiese_members_diff;
 
-	debug("Applying policy v1 to user: " . $user->getUsername() . "\n");
+	debug("Applying policy v1 to user: " . $user->getUsername() . " (" . $user->getPHID() . ")\n");
 
 	$spielwiese_members_diff['+'][$user->getPHID()] = $user->getPHID();
 }
+
 
 function apply_policy_v1($phab) {
 	global $spielwiese_members_diff;
 
 	if (!empty($spielwiese_members_diff['+'])) {
+		debug("--------------------\n");
 		debug("Finalising policy v1\n");
 
 		$phab_admin = $phab["admin"];
